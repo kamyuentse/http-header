@@ -1,0 +1,14 @@
+[package]
+name = "http-header"
+version = "0.1.0"
+authors = ["Kam Y. Tse <kevin.xjy@gmail.com>"]
+
+[dependencies]
+log = "0.4"
+mime = "0.3"
+time = "0.1"
+bytes = "0.4"
+base64 = "0.9"
+unicase = "2.0"
+language-tags = "0.2"
+percent-encoding = "1.0"
