@@ -77,6 +77,7 @@
 //! }
 //! ```
 
+extern crate http;
 extern crate mime;
 extern crate time;
 extern crate bytes;
@@ -144,6 +145,47 @@ pub trait Header: 'static + HeaderClone + Send + Sync {
     /// case should only format as 1 single line.
     #[inline]
     fn fmt_header(&self, f: &mut Formatter) -> fmt::Result;
+
+    fn get_from(src: &http::HeaderMap) -> ::Result<Vec<Self>>
+        where Self: Sized
+    {
+        let mut res = Vec::new();
+
+        for raw in src.get_all(Self::header_name()) {
+            // FIXME: Avoid using the Raw as the bridge here!
+            let parsed = Self::parse_header(&Raw::from(raw.as_bytes()))?;
+            res.push(parsed);
+        }
+
+        Ok(res)
+    }
+
+    fn put_into(self, dst: &mut http::HeaderMap) where Self: Sized {
+        let entry = dst.entry(Self::header_name())
+            .expect("attempted to convert invalid header name");
+
+        let typed_item = Item::new_typed(self);
+
+        let mut value_iter = typed_item.raw().iter().map(|line| {
+            http::header::HeaderValue::from_bytes(line)
+                .expect("attempted to convert invalid header value")
+        });
+        match entry {
+            http::header::Entry::Occupied(mut occupied) => {
+                for value in value_iter {
+                    occupied.append(value);
+                }
+            },
+            http::header::Entry::Vacant(vacant) => {
+                if let Some(first_value) = value_iter.next() {
+                    let mut occupied = vacant.insert_entry(first_value);
+                    for value in value_iter {
+                        occupied.append(value);
+                    }
+                }
+            }
+        }
+    }
 }
 
 mod sealed {
